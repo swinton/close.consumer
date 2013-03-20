@@ -13,6 +13,7 @@ class App(Flask):
 
     @property
     def manager(self):
+        assert self._manager is not None
         return self._manager
 
     @manager.setter
