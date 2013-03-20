@@ -408,7 +408,7 @@ class BaseManager(object):
         """Fire up a new Consumer.
         """
 
-        logging.info('creating new consumer')
+        logging.info('Starting a consumer')
 
         # create the new consumer
         consumer = self.consumer_class(
@@ -427,6 +427,8 @@ class BaseManager(object):
         # put it in self.consumers
         self.consumers[consumer.id] = g
         logging.info(self.consumers)
+
+        return consumer
 
     def stop_all_consumers(self, accept_updates=True):
         """Kill any consumers.

@@ -142,10 +142,12 @@ def main():
         manager.start_a_consumer()
 
     app = WSGIApp(manager=manager)
-    server = wsgi.WSGIServer(('', options.port), app.handle_requests)
+    http_server = wsgi.WSGIServer(('', options.port), app.handle_requests)
+    # from flaskapp import app
+    # http_server = wsgi.WSGIServer(('', options.port), app)
 
     try:
-        server.serve_forever()
+        http_server.serve_forever()
     except KeyboardInterrupt:
         pass
 
