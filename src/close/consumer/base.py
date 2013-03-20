@@ -132,6 +132,7 @@ class BaseConsumer(ChunkReadingMixin):
         self.host = host
         self.port = port
         self.path = path
+        self.params = params
         self.body = unicode_urlencode(params)
         self.secure = secure
         if username and password:
@@ -505,16 +506,9 @@ class BaseWSGIApp(object):
                 l = []
                 l.extend(values)
                 params[name] = l
-            self.handle_request_params(action, params)
+            # self.handle_request_params(action, params)
             getattr(self, '_%s' % action)()
             return ["OK\r\n"]
         else:
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             return ['Not Found\r\n']
-
-    def handle_request_params(self, action, params):
-        """The idea here is that, when you communicate with the
-          manager, you can pass info in the params.
-        """
-
-        raise NotImplementedError

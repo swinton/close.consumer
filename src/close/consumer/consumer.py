@@ -9,7 +9,13 @@ import sys
 import logging
 import json
 
-from base import BaseConsumer, BaseManager, BaseWSGIApp
+import gevent
+
+from termcolor import colored
+
+from base import BaseConsumer, BaseManager, BaseWSGIApp, notification_queue
+
+import settings
 
 
 class Consumer(BaseConsumer):
@@ -17,6 +23,18 @@ class Consumer(BaseConsumer):
 
       .. _delimited: http://apiwiki.twitter.com/Streaming-API-Documentation#delimited
     """
+
+    def _notify(self, event_name, data):
+        """Puts an {event_name: data} item into a gevent queue_
+
+          .. _queue: http://www.gevent.org/gevent.queue.html
+        """
+
+        item = {}
+        if event_name == "data":
+            data = (self, data)  # Send self as well, so manager knows which consumer sent this event
+        item[event_name] = data
+        notification_queue.put_nowait(item)
 
     def get_data(self):
         line = self._readline_chunked()
@@ -28,33 +46,68 @@ class Manager(BaseManager):
     """Generate the filter predicates and handle the data.
     """
 
+    colors = {}
+
     def get_headers(self):
         return {}
 
     def get_params(self):
-        """Hard-coding params for now.
+        """Read params from settings.PARAMS_LIST.
         """
-        return dict(track="justinbieber")
+        return dict(settings.PARAMS_LIST.pop())
 
     def handle_data(self, data):
-        """Append the data to a redis list and notify that
-          we've done so.
+        """Just print the data.
         """
-        item = json.loads(data)
-        print item["text"]
+        # Unpack data
+        consumer, data = data
+        try:
+            item = json.loads(data)
+            print colored(repr(consumer.params), self.colors[consumer.id]), item["text"]
+        except Exception as e:
+            logging.error(e)
+            logging.error(repr(data))
+
+    def _handle_connect(self, consumer_id):
+        """In our implementation, we want to allow concurrent consumers to run.
+        """
+        pass
+
+    def start_a_consumer(self):
+        """Fire up a new Consumer.
+        """
+
+        try:
+            username, password = settings.ACCOUNTS_LIST.pop()
+        except:
+            username, password = (self.username, self.password)
+
+        logging.info('Starting a consumer for {0}'.format(username))
+
+        # create the new consumer
+        consumer = self.consumer_class(
+            path=self.path,
+            host=self.host,
+            params=self.get_params(),
+            username=username,
+            password=password,
+            headers=self.get_headers(),
+        )
+        logging.info(consumer.id)
+
+        # start the consumer in a new greenlet
+        g = gevent.spawn(consumer.run)
+
+        # put it in self.consumers
+        self.consumers[consumer.id] = g
+        self.colors[consumer.id] = settings.COLORS.pop()
+        logging.info(self.consumers)
+
+        return consumer
 
 
 class WSGIApp(BaseWSGIApp):
-    def handle_request_params(self, action, params):
-        """Save the predicates.
-        """
-
-        logging.warning(
-            '@@ no validation is being applied to follow and track params'
-        )
-
-        track = params.get('track', None)
-        print "track", track
+    pass
 
 
 def parse_options():

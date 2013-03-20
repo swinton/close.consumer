@@ -1,0 +1,10 @@
+Flask==0.9
+Jinja2==2.6
+Werkzeug==0.8.3
+distribute==0.6.31
+gevent==0.13.8
+greenlet==0.4.0
+ipython==0.12.1
+redis==2.7.2
+termcolor==1.1.0
+wsgiref==0.1.2
