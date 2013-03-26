@@ -57,7 +57,7 @@ def main():
         kwargs['password'] = options.password
 
     # Create a Manager instance and store it on the app
-    app.manager = Manager(Consumer, options.host, options.path, **kwargs)
+    app.manager = Manager(Consumer, options.host, options.path, options.params, **kwargs)
     http_server = wsgi.WSGIServer(('', options.port), app)
 
     try:

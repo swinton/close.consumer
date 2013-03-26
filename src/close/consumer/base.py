@@ -153,6 +153,7 @@ class BaseConsumer(ChunkReadingMixin):
         self.min_http_delay = min_http_delay
         self.max_http_delay = max_http_delay
         self.id = generate_hash()
+        # import pdb; pdb.set_trace()
 
     def _incr_tcp_ip_delay(self, delay):
         """When a network error (TCP/IP level) is encountered,
@@ -316,12 +317,13 @@ class BaseManager(object):
     exit_delay = 0
 
     def __init__(
-            self, consumer_class, host, path, username=None, password=None,
+            self, consumer_class, host, path, params, username=None, password=None,
             num_workers=10, min_exit_delay=0.25, max_exit_delay=16
         ):
         self.consumer_class = consumer_class
         self.host = host
-        self.path = path
+        self.path = "?".join((path, unicode_urlencode(params)))
+        self.params = params
         self.username = username
         self.password = password
         self.min_exit_delay = min_exit_delay
@@ -412,7 +414,7 @@ class BaseManager(object):
         consumer = self.consumer_class(
             path=self.path,
             host=self.host,
-            params=self.get_params(),
+            params=dict(self.params.items() + self.get_params().items()),
             headers=self.get_headers(),
             auth_method=generate_auth_header,
             auth_options={"username": self.username, "password": self.password}

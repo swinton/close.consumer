@@ -15,7 +15,7 @@ from termcolor import colored
 
 from base import BaseConsumer, BaseManager, BaseWSGIApp, notification_queue
 
-from utils import generate_auth_header
+from utils import generate_auth_header, generate_oauth_header
 
 import settings
 
@@ -136,7 +136,15 @@ def parse_options():
         action='store',
         type='string',
         help='the path you want the streaming API ``Consumer.conn`` to request',
-        default='/1/statuses/filter.json?delimited=length'
+        default='/1/statuses/filter.json'
+    )
+    parser.add_option(
+        '--params',
+        dest='params',
+        action='callback',
+        callback=json.loads,
+        help='the parameters you want to use with the streaming API request',
+        default={"delimited": "length"}
     )
     parser.add_option(
         '--username',
@@ -192,7 +200,7 @@ def main():
     if options.password:
         kwargs['password'] = options.password
 
-    manager = Manager(Consumer, options.host, options.path, **kwargs)
+    manager = Manager(Consumer, options.host, options.path, options.params, **kwargs)
     if options.should_start_consumer:
         manager.start_a_consumer()
 
