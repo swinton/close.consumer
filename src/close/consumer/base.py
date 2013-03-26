@@ -115,10 +115,9 @@ class BaseConsumer(ChunkReadingMixin):
 
     def __init__(
             self, host, path, port=None, params={}, headers={},
-            timeout=61, username=None, password=None,
-            min_tcp_ip_delay=0.25, max_tcp_ip_delay=16,
+            timeout=61, min_tcp_ip_delay=0.25, max_tcp_ip_delay=16,
             min_http_delay=10, max_http_delay=240,
-            secure=True
+            secure=True, auth_method=None, auth_options={}
         ):
         """Store config and build the connection headers.
         """
@@ -135,10 +134,8 @@ class BaseConsumer(ChunkReadingMixin):
         self.params = params
         self.body = unicode_urlencode(params)
         self.secure = secure
-        if username and password:
-            self.username = username
-            self.password = password
-            headers['Authorization'] = generate_auth_header(username, password)
+        if auth_method and callable(auth_method):
+            headers['Authorization'] = auth_method(**auth_options)
         header_lines = [
             'POST %s HTTP/1.1' % self.path,
             'Host: %s' % self.host,
@@ -416,9 +413,9 @@ class BaseManager(object):
             path=self.path,
             host=self.host,
             params=self.get_params(),
-            username=self.username,
-            password=self.password,
             headers=self.get_headers(),
+            auth_method=generate_auth_header,
+            auth_options={"username": self.username, "password": self.password}
         )
         logging.info(consumer.id)
 

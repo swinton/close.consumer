@@ -15,6 +15,8 @@ from termcolor import colored
 
 from base import BaseConsumer, BaseManager, BaseWSGIApp, notification_queue
 
+from utils import generate_auth_header
+
 import settings
 
 
@@ -89,9 +91,9 @@ class Manager(BaseManager):
             path=self.path,
             host=self.host,
             params=self.get_params(),
-            username=username,
-            password=password,
             headers=self.get_headers(),
+            auth_method=generate_auth_header,
+            auth_options={"username": username, "password": password}
         )
         logging.info(consumer.id)
 
