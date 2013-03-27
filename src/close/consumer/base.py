@@ -112,11 +112,12 @@ class BaseConsumer(ChunkReadingMixin):
     """
 
     sock = None
+    body = None
 
     def __init__(
             self, host, path, port=None, params={}, headers={},
-            timeout=61, min_tcp_ip_delay=0.25, max_tcp_ip_delay=16,
-            min_http_delay=10, max_http_delay=240,
+            method="POST", timeout=61, min_tcp_ip_delay=0.25,
+            max_tcp_ip_delay=16, min_http_delay=10, max_http_delay=240,
             secure=True, auth_method=None, auth_options={}
         ):
         """Store config and build the connection headers.
@@ -131,16 +132,20 @@ class BaseConsumer(ChunkReadingMixin):
         self.host = host
         self.port = port
         self.path = path
+        self.method = method
         self.params = params
-        self.body = unicode_urlencode(params)
         self.secure = secure
-        if auth_method and callable(auth_method):
+        if callable(auth_method):
             headers['Authorization'] = auth_method(**auth_options)
+        if method == "GET":
+            self.path = "?".join((self.path, unicode_urlencode(params)))
+        if method == "POST":
+            self.body = unicode_urlencode(params)
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            headers["Content-Length"] = len(self.body)
         header_lines = [
-            'POST %s HTTP/1.1' % self.path,
+            '%s %s HTTP/1.1' % (self.method, self.path),
             'Host: %s' % self.host,
-            'Content-Length: %s' % len(self.body),
-            'Content-Type: application/x-www-form-urlencoded'
         ]
         header_lines.extend([
                 '%s: %s' % (k, v) for k, v in headers.iteritems()
@@ -260,7 +265,8 @@ class BaseConsumer(ChunkReadingMixin):
                 self.sock.settimeout(self.timeout)
                 self.sock.connect((self.host, self.port))
                 self.sock.send(self.headers)
-                self.sock.send(self.body)
+                if self.body is not None:
+                    self.sock.send(self.body)
                 status = self._get_status_and_consume_headers()
                 if status == 200:
                     self._notify('connect', self.id)
