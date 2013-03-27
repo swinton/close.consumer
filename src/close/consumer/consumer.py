@@ -111,7 +111,11 @@ class Manager(BaseManager):
         consumer, data = data
         try:
             item = json.loads(data)
-            print colored(consumer.id, self.colors[consumer.id]), item
+            print colored(consumer.id, self.colors[consumer.id])
+            if "event" in item and item["event"] == "favorite":
+                print colored("@{source} favorited @{target}'s tweet: {tweet}".format(source=item["source"]["screen_name"], target=item["target"]["screen_name"], tweet=item["target_object"]["text"]), "magenta")
+            else:
+                print item
         except Exception as e:
             logging.error(e)
             logging.error(repr(data))
