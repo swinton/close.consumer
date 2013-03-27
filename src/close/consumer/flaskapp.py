@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+Flask-based app for running concurrent streams.
+
+To start a server:
+
+    python -m close.consumer.flaskapp --serve-only
+"""
+
 import sys
 import logging
 
