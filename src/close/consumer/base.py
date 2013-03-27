@@ -115,9 +115,10 @@ class BaseConsumer(ChunkReadingMixin):
 
     def __init__(
             self, host, path, port=None, params={}, headers={},
-            timeout=61, min_tcp_ip_delay=0.25, max_tcp_ip_delay=16,
+            timeout=61, username=None, password=None,
+            min_tcp_ip_delay=0.25, max_tcp_ip_delay=16,
             min_http_delay=10, max_http_delay=240,
-            secure=True, auth_method=None, auth_options={}
+            secure=True
         ):
         """Store config and build the connection headers.
         """
@@ -131,10 +132,13 @@ class BaseConsumer(ChunkReadingMixin):
         self.host = host
         self.port = port
         self.path = path
+        self.params = params
         self.body = unicode_urlencode(params)
         self.secure = secure
-        if auth_method and callable(auth_method):
-            headers['Authorization'] = auth_method(**auth_options)
+        if username and password:
+            self.username = username
+            self.password = password
+            headers['Authorization'] = generate_auth_header(username, password)
         header_lines = [
             'POST %s HTTP/1.1' % self.path,
             'Host: %s' % self.host,
@@ -152,7 +156,6 @@ class BaseConsumer(ChunkReadingMixin):
         self.min_http_delay = min_http_delay
         self.max_http_delay = max_http_delay
         self.id = generate_hash()
-        import pdb; pdb.set_trace()
 
     def _incr_tcp_ip_delay(self, delay):
         """When a network error (TCP/IP level) is encountered,
@@ -316,13 +319,12 @@ class BaseManager(object):
     exit_delay = 0
 
     def __init__(
-            self, consumer_class, host, path, params, username=None, password=None,
+            self, consumer_class, host, path, username=None, password=None,
             num_workers=10, min_exit_delay=0.25, max_exit_delay=16
         ):
         self.consumer_class = consumer_class
         self.host = host
-        self.path = "?".join((path, unicode_urlencode(params)))
-        self.params = params
+        self.path = path
         self.username = username
         self.password = password
         self.min_exit_delay = min_exit_delay
@@ -414,9 +416,9 @@ class BaseManager(object):
             path=self.path,
             host=self.host,
             params=self.get_params(),
+            username=self.username,
+            password=self.password,
             headers=self.get_headers(),
-            auth_method=generate_auth_header,
-            auth_options={"username": self.username, "password": self.password}
         )
         logging.info(consumer.id)
 

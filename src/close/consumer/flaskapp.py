@@ -1,13 +1,5 @@
 #!/usr/bin/env python
 
-"""
-Flask-based app for running concurrent streams.
-
-To start a server:
-
-    python -m close.consumer.flaskapp --serve-only
-"""
-
 import sys
 import logging
 
@@ -57,7 +49,7 @@ def main():
         kwargs['password'] = options.password
 
     # Create a Manager instance and store it on the app
-    app.manager = Manager(Consumer, options.host, options.path, options.params, **kwargs)
+    app.manager = Manager(Consumer, options.host, options.path, **kwargs)
     http_server = wsgi.WSGIServer(('', options.port), app)
 
     try:

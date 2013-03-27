@@ -15,8 +15,6 @@ from termcolor import colored
 
 from base import BaseConsumer, BaseManager, BaseWSGIApp, notification_queue
 
-from utils import generate_auth_header, generate_oauth_header
-
 import settings
 
 
@@ -56,8 +54,7 @@ class Manager(BaseManager):
     def get_params(self):
         """Read params from settings.PARAMS_LIST.
         """
-        # return dict(settings.PARAMS_LIST.pop())
-        return {}
+        return dict(settings.PARAMS_LIST.pop())
 
     def handle_data(self, data):
         """Just print the data.
@@ -80,25 +77,21 @@ class Manager(BaseManager):
         """Fire up a new Consumer.
         """
 
-        # try:
-        #     username, password = settings.ACCOUNTS_LIST.pop()
-        # except:
-        #     username, password = (self.username, self.password)
+        try:
+            username, password = settings.ACCOUNTS_LIST.pop()
+        except:
+            username, password = (self.username, self.password)
 
-        # logging.info('Starting a consumer for {0}'.format(username))
-        oauth_options = settings.ACCOUNTS_LIST.pop()
-        oauth_options["url"] = "".join(("https://", self.host, self.path))
-        oauth_options["method"] = "POST"
-        oauth_options["parameters"] = self.params
+        logging.info('Starting a consumer for {0}'.format(username))
 
         # create the new consumer
         consumer = self.consumer_class(
             path=self.path,
             host=self.host,
             params=self.get_params(),
+            username=username,
+            password=password,
             headers=self.get_headers(),
-            auth_method=generate_oauth_header,
-            auth_options=oauth_options,
         )
         logging.info(consumer.id)
 
@@ -133,7 +126,7 @@ def parse_options():
         action='store',
         type='string',
         help='the host you want the streaming API ``Consumer`` to connect to',
-        default='userstream.twitter.com'
+        default='stream.twitter.com'
     )
     parser.add_option(
         '--path',
@@ -141,15 +134,7 @@ def parse_options():
         action='store',
         type='string',
         help='the path you want the streaming API ``Consumer.conn`` to request',
-        default='/2/user.json'
-    )
-    parser.add_option(
-        '--params',
-        dest='params',
-        action='callback',
-        callback=json.loads,
-        help='the parameters you want to use with the streaming API request',
-        default={"delimited": "length"}
+        default='/1/statuses/filter.json?delimited=length'
     )
     parser.add_option(
         '--username',
@@ -205,7 +190,7 @@ def main():
     if options.password:
         kwargs['password'] = options.password
 
-    manager = Manager(Consumer, options.host, options.path, options.params, **kwargs)
+    manager = Manager(Consumer, options.host, options.path, **kwargs)
     if options.should_start_consumer:
         manager.start_a_consumer()
 
