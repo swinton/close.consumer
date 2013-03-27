@@ -29,7 +29,7 @@ import cgi
 import logging
 # import httplib
 
-from utils import generate_hash, generate_auth_header, unicode_urlencode
+from utils import generate_hash, unicode_urlencode
 
 
 class ChunkReadingMixin(object):
@@ -316,14 +316,12 @@ class BaseManager(object):
     exit_delay = 0
 
     def __init__(
-            self, consumer_class, host, path, username=None, password=None,
-            num_workers=10, min_exit_delay=0.25, max_exit_delay=16
+            self, consumer_class, host, path, num_workers=10,
+            min_exit_delay=0.25, max_exit_delay=16
         ):
         self.consumer_class = consumer_class
         self.host = host
         self.path = path
-        self.username = username
-        self.password = password
         self.min_exit_delay = min_exit_delay
         self.max_exit_delay = max_exit_delay
         # spawn worker greenlets to handle notifications
@@ -409,14 +407,7 @@ class BaseManager(object):
         logging.info('Starting a consumer')
 
         # create the new consumer
-        consumer = self.consumer_class(
-            path=self.path,
-            host=self.host,
-            params=self.get_params(),
-            headers=self.get_headers(),
-            auth_method=generate_auth_header,
-            auth_options={"username": self.username, "password": self.password}
-        )
+        consumer = self.create_consumer()
         logging.info(consumer.id)
 
         # start the consumer in a new greenlet
@@ -438,6 +429,13 @@ class BaseManager(object):
             item.kill(block=True)
 
         self.consumers = {}
+
+    def create_consumer(self):
+        """Override to create the consumer according to your authentication
+          protocol.
+        """
+
+        raise NotImplementedError
 
     def get_headers(self):
         """Override to specify the headers to POST to the streaming

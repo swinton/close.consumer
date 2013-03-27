@@ -75,14 +75,8 @@ class Manager(BaseManager):
         """
         pass
 
-    def start_a_consumer(self):
-        """Fire up a new Consumer.
-        """
-
-        try:
-            username, password = settings.ACCOUNTS_LIST.pop()
-        except:
-            username, password = (self.username, self.password)
+    def create_consumer(self):
+        username, password = settings.ACCOUNTS_LIST.pop()
 
         logging.info('Starting a consumer for {0}'.format(username))
 
@@ -95,15 +89,7 @@ class Manager(BaseManager):
             auth_method=generate_auth_header,
             auth_options={"username": username, "password": password}
         )
-        logging.info(consumer.id)
-
-        # start the consumer in a new greenlet
-        g = gevent.spawn(consumer.run)
-
-        # put it in self.consumers
-        self.consumers[consumer.id] = g
         self.colors[consumer.id] = settings.COLORS.pop()
-        logging.info(self.consumers)
 
         return consumer
 
