@@ -128,10 +128,12 @@ class Manager(BaseManager):
         url = "".join(("https://", host, path))
         params = self.get_params()
 
+        access_key, access_secret = settings.ACCESS_TOKENS.pop()
+
         auth_options = dict(consumer_key=settings.CONSUMER_KEY,
                             consumer_secret=settings.CONSUMER_SECRET,
-                            access_key=settings.ACCESS_KEY,
-                            access_secret=settings.ACCESS_SECRET,
+                            access_key=access_key,
+                            access_secret=access_secret,
                             url=url,
                             method=method,
                             parameters=params)

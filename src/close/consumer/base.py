@@ -255,7 +255,7 @@ class BaseConsumer(ChunkReadingMixin):
         notify_on_exit = True
         while True:
             try:
-                # import pdb; pdb.set_trace()
+                logging.info("Connecting to {host} on port {port}".format(host=self.host, port=self.port))
                 raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 if self.secure:
                     self.sock = ssl.wrap_socket(raw_sock)
@@ -410,18 +410,15 @@ class BaseManager(object):
         """Fire up a new Consumer.
         """
 
-        logging.info('Starting a consumer')
-
         # create the new consumer
         consumer = self.create_consumer()
-        logging.info(consumer.id)
+        logging.info('Starting consumer id {id}'.format(id=consumer.id))
 
         # start the consumer in a new greenlet
         g = gevent.spawn(consumer.run)
 
         # put it in self.consumers
         self.consumers[consumer.id] = g
-        logging.info(self.consumers)
 
         return consumer
 
