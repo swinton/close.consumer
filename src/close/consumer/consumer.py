@@ -9,13 +9,11 @@ import sys
 import logging
 import json
 
-import gevent
-
 from termcolor import colored
 
 from base import BaseConsumer, BaseManager, BaseWSGIApp, notification_queue
 
-from utils import generate_auth_header
+from utils import generate_auth_header, generate_oauth_header
 
 import settings
 
@@ -44,7 +42,7 @@ class Consumer(BaseConsumer):
             return self._read_chunked(int(line))
 
 
-class Manager(BaseManager):
+class FilterStreamManager(BaseManager):
     """Generate the filter predicates and handle the data.
     """
 
@@ -88,6 +86,65 @@ class Manager(BaseManager):
             headers=self.get_headers(),
             auth_method=generate_auth_header,
             auth_options={"username": username, "password": password}
+        )
+        self.colors[consumer.id] = settings.COLORS.pop()
+
+        return consumer
+
+
+class Manager(BaseManager):
+    """Generate the user stream predicates and handle the data.
+    """
+
+    colors = {}
+
+    def get_headers(self):
+        return {}
+
+    def get_params(self):
+        return dict(delimited="length")
+
+    def handle_data(self, data):
+        """Just print the data.
+        """
+        # Unpack data
+        consumer, data = data
+        try:
+            item = json.loads(data)
+            print colored(consumer.id, self.colors[consumer.id]), item
+        except Exception as e:
+            logging.error(e)
+            logging.error(repr(data))
+
+    def _handle_connect(self, consumer_id):
+        """In our implementation, we want to allow concurrent consumers to run.
+        """
+        pass
+
+    def create_consumer(self):
+        method = "GET"
+        host = "userstream.twitter.com"
+        path = "/1.1/user.json"
+        url = "".join(("https://", host, path))
+        params = self.get_params()
+
+        auth_options = dict(consumer_key=settings.CONSUMER_KEY,
+                            consumer_secret=settings.CONSUMER_SECRET,
+                            access_key=settings.ACCESS_KEY,
+                            access_secret=settings.ACCESS_SECRET,
+                            url=url,
+                            method=method,
+                            parameters=params)
+
+        # create the new consumer
+        consumer = self.consumer_class(
+            method=method,
+            host=host,
+            path=path,
+            params=params,
+            headers=self.get_headers(),
+            auth_method=generate_oauth_header,
+            auth_options=auth_options
         )
         self.colors[consumer.id] = settings.COLORS.pop()
 
