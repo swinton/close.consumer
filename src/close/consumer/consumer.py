@@ -56,7 +56,8 @@ class Manager(BaseManager):
     def get_params(self):
         """Read params from settings.PARAMS_LIST.
         """
-        return dict(settings.PARAMS_LIST.pop())
+        # return dict(settings.PARAMS_LIST.pop())
+        return {}
 
     def handle_data(self, data):
         """Just print the data.
@@ -79,12 +80,16 @@ class Manager(BaseManager):
         """Fire up a new Consumer.
         """
 
-        try:
-            username, password = settings.ACCOUNTS_LIST.pop()
-        except:
-            username, password = (self.username, self.password)
+        # try:
+        #     username, password = settings.ACCOUNTS_LIST.pop()
+        # except:
+        #     username, password = (self.username, self.password)
 
-        logging.info('Starting a consumer for {0}'.format(username))
+        # logging.info('Starting a consumer for {0}'.format(username))
+        oauth_options = settings.ACCOUNTS_LIST.pop()
+        oauth_options["url"] = "".join(("https://", self.host, self.path))
+        oauth_options["method"] = "POST"
+        oauth_options["parameters"] = self.params
 
         # create the new consumer
         consumer = self.consumer_class(
@@ -92,8 +97,8 @@ class Manager(BaseManager):
             host=self.host,
             params=self.get_params(),
             headers=self.get_headers(),
-            auth_method=generate_auth_header,
-            auth_options={"username": username, "password": password}
+            auth_method=generate_oauth_header,
+            auth_options=oauth_options,
         )
         logging.info(consumer.id)
 
@@ -128,7 +133,7 @@ def parse_options():
         action='store',
         type='string',
         help='the host you want the streaming API ``Consumer`` to connect to',
-        default='stream.twitter.com'
+        default='userstream.twitter.com'
     )
     parser.add_option(
         '--path',
@@ -136,7 +141,7 @@ def parse_options():
         action='store',
         type='string',
         help='the path you want the streaming API ``Consumer.conn`` to request',
-        default='/1/statuses/filter.json'
+        default='/2/user.json'
     )
     parser.add_option(
         '--params',
