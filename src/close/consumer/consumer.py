@@ -97,6 +97,7 @@ class Manager(BaseManager):
     """
 
     colors = {}
+    names = {}
 
     def get_headers(self):
         return {}
@@ -104,18 +105,52 @@ class Manager(BaseManager):
     def get_params(self):
         return dict(delimited="length")
 
+    def _handle_friends_list(self, consumer, item):
+        print colored("Connected to @{name}'s stream".format(name=self.names[consumer.id]), self.colors[consumer.id])
+
+    def _handle_reply(self, consumer, item):
+        print colored("@{source} replied to @{target}'s tweet: {reply}".format(source=item["user"]["screen_name"], target=item["in_reply_to_screen_name"], reply=item["text"]), self.colors[consumer.id])
+
+    def _handle_retweet(self, consumer, item):
+        print colored("@{source} retweeted @{target}'s tweet to {n_followers} followers: {tweet}".format(source=item["user"]["screen_name"], target=item["retweeted_status"]["user"]["screen_name"], n_followers=item["user"]["followers_count"], tweet=item["retweeted_status"]["text"]), self.colors[consumer.id])
+
+    def _handle_follow(self, consumer, item):
+        print colored("@{source} started following @{target}".format(source=item["source"]["screen_name"], target=item["target"]["screen_name"]), self.colors[consumer.id])
+
+    def _handle_unfollow(self, consumer, item):
+        print colored("@{source} stopped following @{target}".format(source=item["source"]["screen_name"], target=item["target"]["screen_name"]), self.colors[consumer.id])
+
+    def _handle_favorite(self, consumer, item):
+        print colored("@{source} favorited @{target}'s tweet: {tweet}".format(source=item["source"]["screen_name"], target=item["target"]["screen_name"], tweet=item["target_object"]["text"]), self.colors[consumer.id])
+
+    def _handle_unfavorite(self, consumer, item):
+        print colored("@{source} UNfavorited @{target}'s tweet: {tweet}".format(source=item["source"]["screen_name"], target=item["target"]["screen_name"], tweet=item["target_object"]["text"]), self.colors[consumer.id])
+
     def handle_data(self, data):
         """Just print the data.
         """
         # Unpack data
         consumer, data = data
+        name = self.names[consumer.id]
         try:
             item = json.loads(data)
-            print colored(consumer.id, self.colors[consumer.id])
-            if "event" in item and item["event"] == "favorite":
-                print colored("@{source} favorited @{target}'s tweet: {tweet}".format(source=item["source"]["screen_name"], target=item["target"]["screen_name"], tweet=item["target_object"]["text"]), "magenta")
-            else:
-                print item
+
+            item_is_friends_list = "friends" in item
+            if item_is_friends_list:
+                return self._handle_friends_list(consumer, item)
+
+            item_is_a_reply = "in_reply_to_screen_name" in item and item["in_reply_to_screen_name"] == name
+            if item_is_a_reply:
+                return self._handle_reply(consumer, item)
+
+            item_is_a_retweet = "retweeted_status" in item and item["retweeted_status"]["user"]["screen_name"] == name
+            if item_is_a_retweet:
+                return self._handle_retweet(consumer, item)
+
+            if "event" in item:
+                return getattr(self, "_handle_{event}".format(event=item["event"]))(consumer, item)
+
+            # print item
         except Exception as e:
             logging.error(e)
             logging.error(repr(data))
@@ -132,7 +167,7 @@ class Manager(BaseManager):
         url = "".join(("https://", host, path))
         params = self.get_params()
 
-        access_key, access_secret = settings.ACCESS_TOKENS.pop()
+        name, access_key, access_secret = settings.ACCESS_TOKENS.pop()
 
         auth_options = dict(consumer_key=settings.CONSUMER_KEY,
                             consumer_secret=settings.CONSUMER_SECRET,
@@ -152,6 +187,7 @@ class Manager(BaseManager):
             auth_method=generate_oauth_header,
             auth_options=auth_options
         )
+        self.names[consumer.id] = name
         self.colors[consumer.id] = settings.COLORS.pop()
 
         return consumer
